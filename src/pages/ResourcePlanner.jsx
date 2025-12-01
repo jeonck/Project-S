@@ -1,5 +1,5 @@
 import React from 'react';
-import { FrappeGantt as Gantt } from 'frappe-gantt-react';
+import { FrappeGantt as Gantt } from 'frappe-gantt-react/src/FrappeGantt';
 import { useData } from '../context/DataContext';
 import 'frappe-gantt/dist/frappe-gantt.css';
 

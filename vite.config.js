@@ -5,10 +5,5 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: '/Project-S/',
-  build: {
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-  },
 });
 
