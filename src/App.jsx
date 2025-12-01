@@ -27,7 +27,7 @@ function App() {
 
   return (
     <DataProvider>
-      <Router basename="/projectpro-react">
+      <Router basename="/Project-S">
         <div className="bg-gray-50 font-[Poppins] min-h-screen flex flex-col">
           <Header onMenuToggle={toggleSidebar} />
 
