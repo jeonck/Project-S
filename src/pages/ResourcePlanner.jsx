@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FrappeGantt as Gantt } from 'frappe-gantt-react/src/FrappeGantt';
 import { useData } from '../context/DataContext';
 import 'frappe-gantt/dist/frappe-gantt.css';
+import { ViewMode } from 'frappe-gantt'; // Import ViewMode enum
 
 const ResourcePlanner = () => {
-  const { teamMembers, tasks, projects } = useData();
+  const { teamMembers, tasks, projects, updateTask, updateProject } = useData();
+  const [currentViewMode, setCurrentViewMode] = useState(ViewMode.Week);
 
   // Helper to generate a start date based on the end date
   const getStartDate = (endDate, duration = 30) => {
@@ -19,10 +21,12 @@ const ResourcePlanner = () => {
       .map(task => ({
         id: `task-${task.id}`,
         name: `[태스크] ${task.name}`,
-        start: getStartDate(task.dueDate, 7), // Shorter duration for tasks
+        start: getStartDate(task.dueDate, 7), // Shorter duration for tasks (7 days)
         end: task.dueDate,
         progress: task.status === '완료' ? 100 : Math.floor(Math.random() * 80) + 10,
         custom_class: 'bar-task',
+        type: 'task', // Custom property to identify type
+        originalId: task.id,
       }));
 
     const memberProjects = projects
@@ -30,13 +34,81 @@ const ResourcePlanner = () => {
       .map(project => ({
         id: `project-${project.name}`,
         name: `[프로젝트] ${project.name}`,
-        start: getStartDate(project.dueDate, 30), // Longer duration for projects
+        start: getStartDate(project.dueDate, 30), // Longer duration for projects (30 days)
         end: project.dueDate,
         progress: project.status === '완료' ? 100 : (project.status === '진행 중' ? 50 : 10),
         custom_class: 'bar-project',
+        type: 'project', // Custom property to identify type
+        originalName: project.name, // Use original name to find in projects array
       }));
 
     return [...memberTasks, ...memberProjects];
+  };
+
+  const handleDateChange = (ganttTask, start, end) => {
+    const [type, originalIdOrName] = ganttTask.id.split('-');
+    const newDueDate = end.toISOString().split('T')[0];
+
+    if (type === 'task') {
+      const taskId = parseInt(originalIdOrName);
+      const originalTask = tasks.find(t => t.id === taskId);
+      if (originalTask) {
+        updateTask(taskId, { ...originalTask, dueDate: newDueDate });
+      }
+    } else if (type === 'project') {
+      const projectName = originalIdOrName;
+      const originalProject = projects.find(p => p.name === projectName);
+      if (originalProject) {
+        // For projects, we update the dueDate. Start date is inferred.
+        updateProject(
+          projects.findIndex(p => p.name === projectName),
+          { ...originalProject, dueDate: newDueDate }
+        );
+      }
+    }
+  };
+
+  const handleProgressChange = (ganttTask, progress) => {
+    const [type, originalIdOrName] = ganttTask.id.split('-');
+    const newProgress = Math.round(progress); // Ensure integer progress
+
+    if (type === 'task') {
+      const taskId = parseInt(originalIdOrName);
+      const originalTask = tasks.find(t => t.id === taskId);
+      if (originalTask) {
+        // Adjust status based on progress (simple logic)
+        let newStatus = originalTask.status;
+        if (newProgress === 100) {
+          newStatus = '완료';
+        } else if (newProgress > 0 && originalTask.status === '예정') {
+          newStatus = '진행 중';
+        } else if (newProgress === 0 && originalTask.status === '진행 중') {
+          newStatus = '예정'; // Or some other default
+        }
+        updateTask(taskId, { ...originalTask, progress: newProgress, status: newStatus });
+      }
+    } else if (type === 'project') {
+      const projectName = originalIdOrName;
+      const originalProject = projects.find(p => p.name === projectName);
+      if (originalProject) {
+        let newStatus = originalProject.status;
+        if (newProgress === 100) {
+          newStatus = '완료';
+        } else if (newProgress > 0 && originalProject.status === '계획') {
+          newStatus = '진행 중';
+        } else if (newProgress === 0 && originalProject.status === '진행 중') {
+          newStatus = '계획';
+        }
+        updateProject(
+          projects.findIndex(p => p.name === projectName),
+          { ...originalProject, progress: newProgress, status: newStatus }
+        );
+      }
+    }
+  };
+
+  const handleViewModeChange = (mode) => {
+    setCurrentViewMode(mode);
   };
 
   return (
@@ -48,15 +120,36 @@ const ResourcePlanner = () => {
       
       <style>{`
         .gantt .bar-task .bar {
-          fill: #60a5fa;
+          fill: #60a5fa; /* Blue for tasks */
         }
         .gantt .bar-project .bar {
-          fill: #a78bfa;
+          fill: #a78bfa; /* Purple for projects */
         }
         .gantt .bar-progress {
           fill: rgba(0, 0, 0, 0.25);
         }
       `}</style>
+
+      <div className="mb-4 flex space-x-2">
+        <button
+          onClick={() => handleViewModeChange(ViewMode.Day)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Day ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+        >
+          Day
+        </button>
+        <button
+          onClick={() => handleViewModeChange(ViewMode.Week)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Week ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+        >
+          Week
+        </button>
+        <button
+          onClick={() => handleViewModeChange(ViewMode.Month)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Month ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+        >
+          Month
+        </button>
+      </div>
 
       <div className="space-y-8">
         {teamMembers.map(member => {
@@ -67,13 +160,14 @@ const ResourcePlanner = () => {
               {memberAssignments.length > 0 ? (
                 <Gantt
                   tasks={memberAssignments}
-                  viewMode="Week"
-                  onClick={task => alert(task.name)}
-                  customPopupHtml={(task) => `
+                  viewMode={currentViewMode}
+                  onDateChange={handleDateChange}
+                  onProgressChange={handleProgressChange}
+                  customPopupHtml={(ganttTask) => `
                     <div class="p-2">
-                      <h4 class="font-bold">${task.name}</h4>
-                      <p>기간: ${task.start} ~ ${task.end}</p>
-                      <p>진행률: ${task.progress}%</p>
+                      <h4 class="font-bold">${ganttTask.name}</h4>
+                      <p>기간: ${ganttTask.start} ~ ${ganttTask.end}</p>
+                      <p>진행률: ${ganttTask.progress}%</p>
                     </div>
                   `}
                 />
