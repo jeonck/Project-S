@@ -126,17 +126,44 @@ export const DataProvider = ({ children }) => {
   };
 
   const loadData = () => {
-    const storedProjects = localStorage.getItem('projects');
-    const storedMilestones = localStorage.getItem('milestones');
-    const storedDeliverables = localStorage.getItem('deliverables');
-    const storedTasks = localStorage.getItem('tasks');
-    const storedTeamMembers = localStorage.getItem('teamMembers');
+    let loadedProjects = [];
+    let loadedMilestones = [];
+    let loadedDeliverables = [];
+    let loadedTasks = [];
+    let loadedTeamMembers = [];
 
-    if (storedProjects) setProjects(JSON.parse(storedProjects));
-    if (storedMilestones) setMilestones(JSON.parse(storedMilestones));
-    if (storedDeliverables) setDeliverables(JSON.parse(storedDeliverables));
-    if (storedTasks) setTasks(JSON.parse(storedTasks));
-    if (storedTeamMembers) setTeamMembers(JSON.parse(storedTeamMembers));
+    const storedProjects = localStorage.getItem('projects');
+    if (storedProjects) loadedProjects = JSON.parse(storedProjects);
+
+    const storedMilestones = localStorage.getItem('milestones');
+    if (storedMilestones) loadedMilestones = JSON.parse(storedMilestones);
+
+    const storedDeliverables = localStorage.getItem('deliverables');
+    if (storedDeliverables) loadedDeliverables = JSON.parse(storedDeliverables);
+
+    const storedTasks = localStorage.getItem('tasks');
+    if (storedTasks) loadedTasks = JSON.parse(storedTasks);
+
+    const storedTeamMembers = localStorage.getItem('teamMembers');
+    if (storedTeamMembers) loadedTeamMembers = JSON.parse(storedTeamMembers);
+
+    // Now process projects to assign missing assignees
+    if (loadedTeamMembers.length > 0) {
+      loadedProjects = loadedProjects.map(project => {
+        if (!project.assignee) {
+          const randomIndex = Math.floor(Math.random() * loadedTeamMembers.length);
+          return { ...project, assignee: loadedTeamMembers[randomIndex].name };
+        }
+        return project;
+      });
+    }
+
+    // Update states
+    setProjects(loadedProjects);
+    setMilestones(loadedMilestones);
+    setDeliverables(loadedDeliverables);
+    setTasks(loadedTasks);
+    setTeamMembers(loadedTeamMembers);
   };
 
   // CRUD 함수들
