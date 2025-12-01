@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { FrappeGantt as Gantt } from 'frappe-gantt-react/src/FrappeGantt';
-import { useData } from '../context/DataContext';
-import 'frappe-gantt/dist/frappe-gantt.css';
-import ViewMode from 'frappe-gantt-react/src/ViewMode'; // Import ViewMode enum
+import { Gantt, ViewMode } from 'gantt-task-react';
+import "gantt-task-react/dist/index.css"; // Import the default CSS for gantt-task-react
 
 const ResourcePlanner = () => {
   const { teamMembers, tasks, projects, updateTask, updateProject } = useData();
@@ -12,7 +10,7 @@ const ResourcePlanner = () => {
   const getStartDate = (endDate, duration = 30) => {
     const date = new Date(endDate);
     date.setDate(date.getDate() - duration);
-    return date.toISOString().split('T')[0];
+    return date; // Return Date object
   };
 
   const getTeamMemberAssignments = (assigneeName) => {
@@ -21,12 +19,13 @@ const ResourcePlanner = () => {
       .map(task => ({
         id: `task-${task.id}`,
         name: `[태스크] ${task.name}`,
-        start: getStartDate(task.dueDate, 7), // Shorter duration for tasks (7 days)
-        end: task.dueDate,
+        start: getStartDate(task.dueDate, 7), // Shorter duration for tasks
+        end: new Date(task.dueDate), // Convert to Date object
         progress: task.status === '완료' ? 100 : Math.floor(Math.random() * 80) + 10,
-        custom_class: 'bar-task',
-        type: 'task', // Custom property to identify type
+        type: 'task', // Gantt-task-react specific type
+        project: assigneeName, // Use assigneeName for grouping within Gantt
         originalId: task.id,
+        styles: { backgroundColor: '#60a5fa', progressColor: '#3b82f6' }, // Blue
       }));
 
     const memberProjects = projects
@@ -34,74 +33,46 @@ const ResourcePlanner = () => {
       .map(project => ({
         id: `project-${project.name}`,
         name: `[프로젝트] ${project.name}`,
-        start: getStartDate(project.dueDate, 30), // Longer duration for projects (30 days)
-        end: project.dueDate,
+        start: getStartDate(project.dueDate, 30), // Longer duration for projects
+        end: new Date(project.dueDate), // Convert to Date object
         progress: project.status === '완료' ? 100 : (project.status === '진행 중' ? 50 : 10),
-        custom_class: 'bar-project',
-        type: 'project', // Custom property to identify type
-        originalName: project.name, // Use original name to find in projects array
+        type: 'project', // Gantt-task-react specific type
+        project: assigneeName, // Use assigneeName for grouping within Gantt
+        originalName: project.name,
+        styles: { backgroundColor: '#a78bfa', progressColor: '#8b5cf6' }, // Purple
       }));
 
     return [...memberTasks, ...memberProjects];
   };
 
-  const handleDateChange = (ganttTask, start, end) => {
+  const handleTaskChange = (ganttTask) => {
     const [type, originalIdOrName] = ganttTask.id.split('-');
-    const newDueDate = end.toISOString().split('T')[0];
+    const newDueDate = ganttTask.end.toISOString().split('T')[0];
+    const newProgress = Math.round(ganttTask.progress);
 
     if (type === 'task') {
       const taskId = parseInt(originalIdOrName);
       const originalTask = tasks.find(t => t.id === taskId);
       if (originalTask) {
-        updateTask(taskId, { ...originalTask, dueDate: newDueDate });
-      }
-    } else if (type === 'project') {
-      const projectName = originalIdOrName;
-      const originalProject = projects.find(p => p.name === projectName);
-      if (originalProject) {
-        // For projects, we update the dueDate. Start date is inferred.
-        updateProject(
-          projects.findIndex(p => p.name === projectName),
-          { ...originalProject, dueDate: newDueDate }
-        );
-      }
-    }
-  };
-
-  const handleProgressChange = (ganttTask, progress) => {
-    const [type, originalIdOrName] = ganttTask.id.split('-');
-    const newProgress = Math.round(progress); // Ensure integer progress
-
-    if (type === 'task') {
-      const taskId = parseInt(originalIdOrName);
-      const originalTask = tasks.find(t => t.id === taskId);
-      if (originalTask) {
-        // Adjust status based on progress (simple logic)
         let newStatus = originalTask.status;
-        if (newProgress === 100) {
-          newStatus = '완료';
-        } else if (newProgress > 0 && originalTask.status === '예정') {
-          newStatus = '진행 중';
-        } else if (newProgress === 0 && originalTask.status === '진행 중') {
-          newStatus = '예정'; // Or some other default
-        }
-        updateTask(taskId, { ...originalTask, progress: newProgress, status: newStatus });
+        if (newProgress === 100) newStatus = '완료';
+        else if (newProgress > 0 && originalTask.status === '예정') newStatus = '진행 중';
+        else if (newProgress === 0 && originalTask.status === '진행 중') newStatus = '예정';
+
+        updateTask(taskId, { ...originalTask, dueDate: newDueDate, progress: newProgress, status: newStatus });
       }
     } else if (type === 'project') {
       const projectName = originalIdOrName;
       const originalProject = projects.find(p => p.name === projectName);
       if (originalProject) {
         let newStatus = originalProject.status;
-        if (newProgress === 100) {
-          newStatus = '완료';
-        } else if (newProgress > 0 && originalProject.status === '계획') {
-          newStatus = '진행 중';
-        } else if (newProgress === 0 && originalProject.status === '진행 중') {
-          newStatus = '계획';
-        }
+        if (newProgress === 100) newStatus = '완료';
+        else if (newProgress > 0 && originalProject.status === '계획') newStatus = '진행 중';
+        else if (newProgress === 0 && originalProject.status === '진행 중') newStatus = '계획';
+
         updateProject(
           projects.findIndex(p => p.name === projectName),
-          { ...originalProject, progress: newProgress, status: newStatus }
+          { ...originalProject, dueDate: newDueDate, progress: newProgress, status: newStatus }
         );
       }
     }
@@ -118,39 +89,6 @@ const ResourcePlanner = () => {
         팀원별 프로젝트 및 태스크 할당을 시각화하고 관리하는 페이지입니다.
       </p>
       
-      <style>{`
-        .gantt .bar-task .bar {
-          fill: #60a5fa; /* Blue for tasks */
-        }
-        .gantt .bar-project .bar {
-          fill: #a78bfa; /* Purple for projects */
-        }
-        .gantt .bar-progress {
-          fill: rgba(0, 0, 0, 0.25);
-        }
-      `}</style>
-
-      <div className="mb-4 flex space-x-2">
-        <button
-          onClick={() => handleViewModeChange(ViewMode.Day)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Day ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-        >
-          Day
-        </button>
-        <button
-          onClick={() => handleViewModeChange(ViewMode.Week)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Week ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-        >
-          Week
-        </button>
-        <button
-          onClick={() => handleViewModeChange(ViewMode.Month)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${currentViewMode === ViewMode.Month ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-        >
-          Month
-        </button>
-      </div>
-
       <div className="space-y-8">
         {teamMembers.map(member => {
           const memberAssignments = getTeamMemberAssignments(member.name);
@@ -161,15 +99,18 @@ const ResourcePlanner = () => {
                 <Gantt
                   tasks={memberAssignments}
                   viewMode={currentViewMode}
-                  onDateChange={handleDateChange}
-                  onProgressChange={handleProgressChange}
-                  customPopupHtml={(ganttTask) => `
-                    <div class="p-2">
-                      <h4 class="font-bold">${ganttTask.name}</h4>
-                      <p>기간: ${ganttTask.start} ~ ${ganttTask.end}</p>
-                      <p>진행률: ${ganttTask.progress}%</p>
-                    </div>
-                  `}
+                  onDateChange={handleTaskChange}
+                  onProgressChange={handleTaskChange}
+                  // Gantt-task-react specific props for customization
+                  listCellWidth={member.name.length * 15 > 150 ? member.name.length * 15 : 150} // Adjust width dynamically, min 150
+                  columnWidth={currentViewMode === ViewMode.Day ? 35 : currentViewMode === ViewMode.Week ? 150 : 300}
+                  barFill={'#60a5fa'} // Default fill color for task bars
+                  barCornerRadius={3}
+                  handleWidth={5}
+                  barProgressColor={'#3b82f6'} // Progress bar color
+                  barProgressSelectedColor={'#1e40af'} // Selected progress bar color
+                  todayColor={'rgba(252, 128, 252, 0.4)'} // Highlight today
+                  // other props as needed by gantt-task-react
                 />
               ) : (
                 <p className="text-gray-500">할당된 작업이 없습니다.</p>
@@ -183,8 +124,5 @@ const ResourcePlanner = () => {
           </div>
         )}
       </div>
-    </div>
-  );
-};
 
 export default ResourcePlanner;
