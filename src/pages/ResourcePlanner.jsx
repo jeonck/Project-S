@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FrappeGantt as Gantt } from 'frappe-gantt-react/src/FrappeGantt';
 import { useData } from '../context/DataContext';
 import 'frappe-gantt/dist/frappe-gantt.css';
-import { ViewMode } from 'frappe-gantt'; // Import ViewMode enum
+import { ViewMode } from 'frappe-gantt-react/src/ViewMode'; // Import ViewMode enum
 
 const ResourcePlanner = () => {
   const { teamMembers, tasks, projects, updateTask, updateProject } = useData();
