@@ -57,11 +57,11 @@ export const DataProvider = ({ children }) => {
   const initializeLocalStorage = () => {
     if (!localStorage.getItem('projects')) {
       const initialProjects = [
-        { name: '프로젝트 A', dueDate: '2025-12-31', status: '진행 중', description: '웹 애플리케이션 개발' },
-        { name: '프로젝트 B', dueDate: '2025-06-30', status: '계획', description: '모바일 앱 런칭' },
-        { name: '프로젝트 C', dueDate: '2025-09-15', status: '진행 중', description: '인공지능 분석 시스템 개발' },
-        { name: '프로젝트 D', dueDate: '2026-02-28', status: '계획', description: '클라우드 서비스 플랫폼 구축' },
-        { name: '프로젝트 E', dueDate: '2025-03-31', status: '완료', description: '사내 그룹웨어 마이그레이션' }
+        { name: '프로젝트 A', dueDate: '2025-12-31', status: '진행 중', description: '웹 애플리케이션 개발', assignee: '고재환' },
+        { name: '프로젝트 B', dueDate: '2025-06-30', status: '계획', description: '모바일 앱 런칭', assignee: '김기홍' },
+        { name: '프로젝트 C', dueDate: '2025-09-15', status: '진행 중', description: '인공지능 분석 시스템 개발', assignee: '김명현' },
+        { name: '프로젝트 D', dueDate: '2026-02-28', status: '계획', description: '클라우드 서비스 플랫폼 구축', assignee: '김상협' },
+        { name: '프로젝트 E', dueDate: '2025-03-31', status: '완료', description: '사내 그룹웨어 마이그레이션', assignee: '고재환' }
       ];
       localStorage.setItem('projects', JSON.stringify(initialProjects));
     }

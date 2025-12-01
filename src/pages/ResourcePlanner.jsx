@@ -7,27 +7,36 @@ const ResourcePlanner = () => {
   const { teamMembers, tasks, projects } = useData();
 
   // Helper to generate a start date based on the end date
-  const getStartDate = (endDate) => {
+  const getStartDate = (endDate, duration = 30) => {
     const date = new Date(endDate);
-    date.setDate(date.getDate() - 5); // Assume a 5-day duration for now
+    date.setDate(date.getDate() - duration);
     return date.toISOString().split('T')[0];
   };
 
-  const getTeamMemberTasks = (assigneeName) => {
-    // Combine tasks and projects into a single list for the gantt chart
+  const getTeamMemberAssignments = (assigneeName) => {
     const memberTasks = tasks
       .filter(task => task.assignee === assigneeName)
       .map(task => ({
         id: `task-${task.id}`,
-        name: task.name,
-        start: getStartDate(task.dueDate),
+        name: `[태스크] ${task.name}`,
+        start: getStartDate(task.dueDate, 7), // Shorter duration for tasks
         end: task.dueDate,
-        progress: task.status === '완료' ? 100 : Math.floor(Math.random() * 80) + 10, // Random progress for demo
+        progress: task.status === '완료' ? 100 : Math.floor(Math.random() * 80) + 10,
+        custom_class: 'bar-task',
       }));
 
-    // For simplicity, we are not assigning projects to members in this example.
-    // In a real scenario, you would have a way to link projects to team members.
-    return memberTasks;
+    const memberProjects = projects
+      .filter(project => project.assignee === assigneeName)
+      .map(project => ({
+        id: `project-${project.name}`,
+        name: `[프로젝트] ${project.name}`,
+        start: getStartDate(project.dueDate, 30), // Longer duration for projects
+        end: project.dueDate,
+        progress: project.status === '완료' ? 100 : (project.status === '진행 중' ? 50 : 10),
+        custom_class: 'bar-project',
+      }));
+
+    return [...memberTasks, ...memberProjects];
   };
 
   return (
@@ -36,23 +45,40 @@ const ResourcePlanner = () => {
       <p className="text-gray-600 mb-4">
         팀원별 프로젝트 및 태스크 할당을 시각화하고 관리하는 페이지입니다.
       </p>
+      
+      <style>{`
+        .gantt .bar-task .bar {
+          fill: #60a5fa;
+        }
+        .gantt .bar-project .bar {
+          fill: #a78bfa;
+        }
+        .gantt .bar-progress {
+          fill: rgba(0, 0, 0, 0.25);
+        }
+      `}</style>
 
       <div className="space-y-8">
         {teamMembers.map(member => {
-          const memberTasks = getTeamMemberTasks(member.name);
+          const memberAssignments = getTeamMemberAssignments(member.name);
           return (
             <div key={member.id} className="bg-white shadow-lg rounded-lg p-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">{member.name} ({member.department} - {member.role})</h2>
-              {memberTasks.length > 0 ? (
+              {memberAssignments.length > 0 ? (
                 <Gantt
-                  tasks={memberTasks}
-                  viewMode="Week" // Can be Day, Week, Month
-                  onClick={task => alert(`Clicked on ${task.name}`)}
-                  onDateChange={(task, start, end) => console.log('Date changed:', task, start, end)}
-                  onProgressChange={(task, progress) => console.log('Progress changed:', task, progress)}
+                  tasks={memberAssignments}
+                  viewMode="Week"
+                  onClick={task => alert(task.name)}
+                  customPopupHtml={(task) => `
+                    <div class="p-2">
+                      <h4 class="font-bold">${task.name}</h4>
+                      <p>기간: ${task.start} ~ ${task.end}</p>
+                      <p>진행률: ${task.progress}%</p>
+                    </div>
+                  `}
                 />
               ) : (
-                <p className="text-gray-500">할당된 태스크가 없습니다.</p>
+                <p className="text-gray-500">할당된 작업이 없습니다.</p>
               )}
             </div>
           );

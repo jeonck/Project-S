@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import StatusBadge from '../components/StatusBadge';
 
 const Projects = () => {
-  const { projects, addProject, updateProject, deleteProject, milestones, deliverables } = useData();
+  const { projects, teamMembers, addProject, updateProject, deleteProject } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
@@ -13,6 +13,7 @@ const Projects = () => {
     dueDate: '',
     status: '계획',
     description: '',
+    assignee: '',
   });
 
   const formatDate = (dateString) => {
@@ -33,6 +34,7 @@ const Projects = () => {
         dueDate: '',
         status: '계획',
         description: '',
+        assignee: teamMembers.length > 0 ? teamMembers[0].name : '',
       });
     }
     setIsModalOpen(true);
@@ -45,6 +47,7 @@ const Projects = () => {
       dueDate: '',
       status: '계획',
       description: '',
+      assignee: '',
     });
   };
 
@@ -52,16 +55,8 @@ const Projects = () => {
     e.preventDefault();
 
     if (editMode) {
-      const oldProject = projects[editIndex];
       updateProject(editIndex, formData);
-
-      // 프로젝트 이름이 변경된 경우, 관련 마일스톤과 산출물 업데이트
-      if (oldProject.name !== formData.name) {
-        // 이 부분은 DataContext에서 처리하는 것이 더 나을 수 있습니다
-        // 여기서는 간단히 구현
-      }
     } else {
-      // 중복 이름 체크
       const isDuplicate = projects.some((p) => p.name === formData.name);
       if (isDuplicate) {
         alert('이미 존재하는 프로젝트 이름입니다.');
@@ -75,9 +70,8 @@ const Projects = () => {
 
   const handleDelete = (index) => {
     const project = projects[index];
-    if (confirm(`"${project.name}" 프로젝트를 삭제하시겠습니까? 관련된 마일스톤과 산출물도 함께 삭제됩니다.`)) {
+    if (confirm(`"${project.name}" 프로젝트를 삭제하시겠습니까?`)) {
       deleteProject(index);
-      // 관련 마일스톤과 산출물 삭제는 DataContext에서 처리해야 합니다
     }
   };
 
@@ -101,13 +95,13 @@ const Projects = () => {
                 이름
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                담당자
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 마감일
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 상태
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                설명
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 작업
@@ -121,12 +115,14 @@ const Projects = () => {
                   {project.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {project.assignee}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(project.dueDate)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <StatusBadge status={project.status} />
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">{project.description}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                   <button
                     onClick={() => handleOpenModal(index)}
@@ -165,6 +161,25 @@ const Projects = () => {
               className="w-full border border-gray-300 p-2 rounded-md focus:border-blue-600 focus:outline-none"
               required
             />
+          </div>
+          <div className="mb-4">
+            <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 mb-1">
+              담당자
+            </label>
+            <select
+              id="assignee"
+              value={formData.assignee}
+              onChange={(e) => setFormData({ ...formData, assignee: e.target.value })}
+              className="w-full border border-gray-300 p-2 rounded-md focus:border-blue-600 focus:outline-none"
+              required
+            >
+              <option value="">담당자 선택</option>
+              {teamMembers.map((member) => (
+                <option key={member.id} value={member.name}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="mb-4">
             <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
