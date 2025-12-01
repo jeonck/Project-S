@@ -102,7 +102,7 @@ const ResourcePlanner = () => {
                   onDateChange={handleTaskChange}
                   onProgressChange={handleTaskChange}
                   // Gantt-task-react specific props for customization
-                  listCellWidth={member.name.length * 15 > 150 ? member.name.length * 15 : 150} // Adjust width dynamically, min 150
+                  listCellWidth={150}
                   columnWidth={currentViewMode === ViewMode.Day ? 35 : currentViewMode === ViewMode.Week ? 150 : 300}
                   barFill={'#60a5fa'} // Default fill color for task bars
                   barCornerRadius={3}
@@ -124,5 +124,8 @@ const ResourcePlanner = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+};
 
 export default ResourcePlanner;
